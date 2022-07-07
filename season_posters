@@ -1,0 +1,22 @@
+#!/bin/bash
+set -o pipefail
+IFS=$'\n\t'
+
+# you want to do something like this
+# for x in $(echo "*"); do cd /Muninn/TV/"${x}"; ~/convert265/season_posters; done
+cp -aln poster.jpg Season\ */
+cp -al season01-poster.jpg Season\ 1/poster.jpg || cp -al poster.jpg Season\ 1/poster.jpg
+cp -al season02-poster.jpg Season\ 2/poster.jpg || cp -al poster.jpg Season\ 2/poster.jpg
+cp -al season03-poster.jpg Season\ 3/poster.jpg || cp -al poster.jpg Season\ 3/poster.jpg
+cp -al season04-poster.jpg Season\ 4/poster.jpg || cp -al poster.jpg Season\ 4/poster.jpg
+cp -al season05-poster.jpg Season\ 5/poster.jpg || cp -al poster.jpg Season\ 5/poster.jpg
+cp -al season06-poster.jpg Season\ 6/poster.jpg || cp -al poster.jpg Season\ 6/poster.jpg
+cp -al season07-poster.jpg Season\ 7/poster.jpg || cp -al poster.jpg Season\ 7/poster.jpg
+cp -al season08-poster.jpg Season\ 8/poster.jpg || cp -al poster.jpg Season\ 8/poster.jpg
+cp -al season09-poster.jpg Season\ 9/poster.jpg || cp -al poster.jpg Season\ 9/poster.jpg
+cp -al season10-poster.jpg Season\ 10/poster.jpg || cp -al poster.jpg Season\ 10/poster.jpg
+cp -al season10-poster.jpg Season\ 11/poster.jpg || cp -al poster.jpg Season\ 11/poster.jpg
+cp -al season10-poster.jpg Season\ 12/poster.jpg || cp -al poster.jpg Season\ 12/poster.jpg
+cp -al season10-poster.jpg Season\ 13/poster.jpg || cp -al poster.jpg Season\ 13/poster.jpg
+cp -al season10-poster.jpg Season\ 14/poster.jpg || cp -al poster.jpg Season\ 14/poster.jpg
+cp -al season10-poster.jpg Season\ 15/poster.jpg || cp -al poster.jpg Season\ 15/poster.jpg
