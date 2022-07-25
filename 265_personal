@@ -17,21 +17,21 @@ for video; do
 	audio_codec=$(mediainfo --Inform="Audio;%Format%" "${video}")
 	video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
 	echo -e "${video} // ${video_codec} // ${audio_codec}"
-	if [[ ! ${video_codec} =~ "HEVC" ]] || [[ ! ${audio_codec} =~ "Opus" ]] ; then
+	if [[ ! ${video_codec} =~ "HEVC" ]] || [[ ! ${audio_codec} =~ "Opus" ]]; then
 		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g' -e 's/AAC/Opus/g' -e 's/DTS/Opus/g' -e 's/EAC3/Opus/g' -e 's/AC3/Opus/g' -e 's/TrueHD/Opus/g' -e 's/Vorbis/Opus/g' -e 's/Atmos//g')_H265.mkv
 		ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -hwaccel_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
-		-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
-		-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' \
-		-c:v hevc_vaapi -profile:v main10 \
-		-c:a copy \
-		-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags \
-		"/dev/shm/$_filename" || exit 1
+			-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
+			-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' \
+			-c:v hevc_vaapi -profile:v main10 \
+			-c:a copy \
+			-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags \
+			"/dev/shm/$_filename" || exit 1
 		mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
 		if [[ -f "${d}/${_filename}" ]]; then
 			cmp "${d}/${_filename}" "${video}" || rm -vf "${video}"
 		fi
 	fi
 done
-		#-vf 'format=p010,hwupload,scale=1920x1080:flags=lanczos' -c:v hevc_vaapi -profile:v main10 \
-		#-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920' \
-		#-c:v hevc_vaapi -profile:v main10 -b:v 15M \
+#-vf 'format=p010,hwupload,scale=1920x1080:flags=lanczos' -c:v hevc_vaapi -profile:v main10 \
+#-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920' \
+#-c:v hevc_vaapi -profile:v main10 -b:v 15M \
