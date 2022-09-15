@@ -13,8 +13,8 @@ for video; do
 	filename=$(basename "$video")
 	extension="${filename##*.}"
 	filename="${filename%.*}"
-	audio_codec=$(mediainfo --Inform="Audio;%Format%" "${video}")
-	video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
+	audio_codec=$(nice -n 19 mediainfo --Inform="Audio;%Format%" "${video}")
+	video_codec=$(nice -n 19 mediainfo --Inform="Video;%Format%" "${video}")
 	echo -e "${video} // ${video_codec} // ${audio_codec}"
 	if [[ ! ${video_codec} =~ "HEVC" ]]; then
 		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g').mkv

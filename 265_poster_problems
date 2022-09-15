@@ -13,14 +13,14 @@ for video; do
 	filename=$(basename "$video")
 	extension="${filename##*.}"
 	filename="${filename%.*}"
-	audio_codec=$(mediainfo --Inform="Audio;%Format%" "${video}")
-	video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
+	audio_codec=$(nice -n 19 mediainfo --Inform="Audio;%Format%" "${video}")
+	video_codec=$(nice -n 19 mediainfo --Inform="Video;%Format%" "${video}")
 	echo -e "${video} // ${video_codec} // ${audio_codec}"
 	if [[ ! ${video_codec} =~ "HEVC" ]]; then
 		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g').mkv
-		nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
-			-i "${video}" -map 0:v:0 -map 0:a -c:a copy \
-			-c:v hevc_vaapi -profile:v main10 \
+		nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
+			-i "${video}" -map 0:v:0 -map 0:a -c:a copy -vf 'format=nv12,hwupload' \
+			-c:v hevc_vaapi \
 			-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "/dev/shm/$_filename" || exit 1
 		mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
 		if [[ -f "${d}/${_filename}" ]]; then
