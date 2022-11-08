@@ -6,20 +6,24 @@ IFS=$'\n\t'
 # find /mnt/ -maxdepth 25 -regex ".*\.\(mkv\|mp4\|wmv\|flv\|webm\|mov\|avi\|m4v\)" | parallel ./parallel_convert_265 {}
 # OR
 # parallel 'find {} -type f -name "*.mkv"' ::: /Muninn/TV /Muninn/Movies | parallel --progress ~/convert265/265 {}
-
 # parallel 'find {} -type f -maxdepth 5 -regex ".*\.\(mkv\|mp4\|wmv\|flv\|webm\|mov\|avi\|m4v\)"' ::: /Muninn/TV /Muninn/Movies | parallel --jobs 2 --progress ~/convert265/265 {}
+
+PRO_DIR="/opt/amdgpu-pro/etc/vulkan/icd.d"
+export LD_LIBRARY_PATH="/opt/amdgpu/libdrm/lib64:/opt/amdgpu/libdrm/lib32:$LD_LIBRARY_PATH"
+export VK_ICD_FILENAMES="${PRO_DIR}/amd_icd32.json:${PRO_DIR}/amd_icd64.json"
+
 
 for video; do
 	d=$(dirname "$video")
 	filename=$(basename "$video")
 	extension="${filename##*.}"
 	filename="${filename%.*}"
-	audio_codec=$(mediainfo --Inform="Audio;%Format%" "${video}")
-	video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
+	audio_codec=$(nice -n 19 mediainfo --Inform="Audio;%Format%" "${video}")
+	video_codec=$(nice -n 19 mediainfo --Inform="Video;%Format%" "${video}")
 	echo -e "${video} // ${video_codec} // ${audio_codec}"
-	if [[ ! ${video_codec} =~ "HEVC" ]] || [[ ! ${audio_codec} =~ "Opus" ]]; then
-		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g' -e 's/AAC/Opus/g' -e 's/DTS/Opus/g' -e 's/EAC3/Opus/g' -e 's/AC3/Opus/g' -e 's/TrueHD/Opus/g' -e 's/Vorbis/Opus/g' -e 's/Atmos//g')_H265.mkv
-		ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -hwaccel_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
+	if [[ ! ${video_codec} =~ "HEVC" ]]; then
+		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g')_H265.mkv
+		nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -hwaccel_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
 			-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
 			-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' \
 			-c:v hevc_vaapi -profile:v main10 \
