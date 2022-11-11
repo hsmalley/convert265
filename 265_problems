@@ -14,7 +14,7 @@ for video; do
 	extension="${filename##*.}"
 	filename="${filename%.*}"
 	video_codec=$(nice -n 19 mediainfo --Inform="Video;%Format%" "${video}")
-	echo -e "${video} // ${video_codec} // ${audio_codec}"
+	echo -e "${video} // ${video_codec}"
 	if [[ ! ${video_codec} =~ "HEVC" ]]; then
 		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g').mkv
 		#nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
