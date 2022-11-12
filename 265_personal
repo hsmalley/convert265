@@ -8,9 +8,9 @@ IFS=$'\n\t'
 # parallel 'find {} -type f -name "*.mkv"' ::: /Muninn/TV /Muninn/Movies | parallel --progress ~/convert265/265 {}
 # parallel 'find {} -type f -maxdepth 5 -regex ".*\.\(mkv\|mp4\|wmv\|flv\|webm\|mov\|avi\|m4v\)"' ::: /Muninn/TV /Muninn/Movies | parallel --jobs 2 --progress ~/convert265/265 {}
 
-PRO_DIR="/opt/amdgpu-pro/etc/vulkan/icd.d"
+pro_dir="/opt/amdgpu-pro/etc/vulkan/icd.d"
 export LD_LIBRARY_PATH="/opt/amdgpu/libdrm/lib64:/opt/amdgpu/libdrm/lib32:$LD_LIBRARY_PATH"
-export VK_ICD_FILENAMES="${PRO_DIR}/amd_icd32.json:${PRO_DIR}/amd_icd64.json"
+export VK_ICD_FILENAMES="${pro_dir}/amd_icd32.json:${pro_dir}/amd_icd64.json"
 
 
 for video; do

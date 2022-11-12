@@ -9,32 +9,32 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/x86_64-linux-gnu/
 # parallel 'find {} -type f -name "*.mkv"' ::: /Muninn/TV /Muninn/Movies | parallel --progress ~/convert265/265 {}
 
 for video; do
-	d=$(dirname "$video")
-	filename=$(basename "$video")
-	extension="${filename##*.}"
-	filename="${filename%.*}"
-	audio_codec=$(mediainfo --Inform="Audio;%Format%" "${video}")
-	video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
-	attachment=$(mediainfo --Inform="General;%Attachments%" "${video}")
-	video_width=$(mediainfo --Inform="Video;%Width%" "${video}")
-	color_primaries=$(mediainfo --Inform="Video;%colour_primaries%" "${video}")
-	echo -e "${video} // ${video_codec} // ${audio_codec} // ${video_width} // ${attachment} // ${color_primaries}"
-	if [[ -f "${d}/poster.jpg" ]]; then
-		poster="${d}/poster.jpg"
-	elif [[ -f "${d}/${filename}.jpg" ]]; then
-		poster="${d}/${filename}.jpg"
-	else
-		poster=""
-	fi
-	if [[ ! ${video_codec} =~ "HEVC" ]] || [[ ! ${audio_codec} =~ "Opus" ]]; then
-		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g' -e 's/AAC/Opus/g' -e 's/DTS/Opus/g' -e 's/EAC3/Opus/g' -e 's/AC3/Opus/g' -e 's/TrueHD/Opus/g' -e 's/Vorbis/Opus/g' -e 's/Atmos//g').mkv
-		#-c:a libopus -b:a 128k -vbr on -compression_level 10 -frame_duration 60 -application audio -mapping_family 1 -ac 6 \
-		~/convert265/tools/ffmpeg -hide_banner -loglevel info -y -hwaccel auto -analyzeduration 20000000 -probesize 20000000 \
-			-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
-			-c:v hevc_nvenc -rc-lookahead 30 -surfaces 64 -qmin 0 -qmax 24 -profile:v main10 -preset p7 -tune hq -multipass 1 \
-			-c:a libopus -b:a 128k -vbr on -compression_level 10 -frame_duration 60 -application audio -mapping_family 1 -ac 6 \
-			-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "/dev/shm/$_filename" || exit 1
-		cmp "/dev/shm/${_filename}" "${video}" || rm -vf "${video}"
-		mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
-	fi
+  d=$(dirname "$video")
+  filename=$(basename "$video")
+  extension="${filename##*.}"
+  filename="${filename%.*}"
+  audio_codec=$(mediainfo --Inform="Audio;%Format%" "${video}")
+  video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
+  attachment=$(mediainfo --Inform="General;%Attachments%" "${video}")
+  video_width=$(mediainfo --Inform="Video;%Width%" "${video}")
+  color_primaries=$(mediainfo --Inform="Video;%colour_primaries%" "${video}")
+  echo -e "${video} // ${video_codec} // ${audio_codec} // ${video_width} // ${attachment} // ${color_primaries}"
+  if [[ -f "${d}/poster.jpg" ]]; then
+    poster="${d}/poster.jpg"
+  elif [[ -f "${d}/${filename}.jpg" ]]; then
+    poster="${d}/${filename}.jpg"
+  else
+    poster=""
+  fi
+  if [[ ! ${video_codec} =~ "HEVC" ]] || [[ ! ${audio_codec} =~ "Opus" ]]; then
+    _filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/XviD/x265/g' -e 's/AAC/Opus/g' -e 's/DTS/Opus/g' -e 's/EAC3/Opus/g' -e 's/AC3/Opus/g' -e 's/TrueHD/Opus/g' -e 's/Vorbis/Opus/g' -e 's/Atmos//g').mkv
+    #-c:a libopus -b:a 128k -vbr on -compression_level 10 -frame_duration 60 -application audio -mapping_family 1 -ac 6 \
+    ~/convert265/tools/ffmpeg -hide_banner -loglevel info -y -hwaccel auto -analyzeduration 20000000 -probesize 20000000 \
+      -i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
+      -c:v hevc_nvenc -rc-lookahead 30 -surfaces 64 -qmin 0 -qmax 24 -profile:v main10 -preset p7 -tune hq -multipass 1 \
+      -c:a libopus -b:a 128k -vbr on -compression_level 10 -frame_duration 60 -application audio -mapping_family 1 -ac 6 \
+      -max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "/dev/shm/$_filename" || exit 1
+    cmp "/dev/shm/${_filename}" "${video}" || rm -vf "${video}"
+    mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
+  fi
 done

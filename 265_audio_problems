@@ -9,22 +9,22 @@ IFS=$'\n\t'
 # parallel 'find {} -type f -maxdepth 5 -regex ".*\.\(mkv\|mp4\|wmv\|flv\|webm\|mov\|avi\|m4v\)"' ::: /Muninn/TV /Muninn/Movies | parallel --jobs 2 --progress ~/convert265/265 {}
 
 for video; do
-	d=$(dirname "$video")
-	filename=$(basename "$video")
-	extension="${filename##*.}"
-	filename="${filename%.*}"
-	video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
-	echo -e "${video} // ${video_codec}"
-	if [[ ! ${video_codec} =~ "HEVC" ]]; then
-		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/AVC/x265/g' -e 's/XviD/x265/g').mkv
-		nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
-			-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
-			-c:a libopus -b:a 128k -vbr on -compression_level 10 -frame_duration 60 -application audio -mapping_family 1 -ac 2 \
-			-c:v hevc_vaapi -profile:v main10 \
-			-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "/dev/shm/$_filename" || exit 1
-		mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
-		if [[ -f "${d}/${_filename}" ]]; then
-			cmp "${d}/${_filename}" "${video}" || rm -vf "${video}"
-		fi
-	fi
+  d=$(dirname "$video")
+  filename=$(basename "$video")
+  extension="${filename##*.}"
+  filename="${filename%.*}"
+  video_codec=$(mediainfo --Inform="Video;%Format%" "${video}")
+  echo -e "${video} // ${video_codec}"
+  if [[ ! ${video_codec} =~ "HEVC" ]]; then
+    _filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/AVC/x265/g' -e 's/XviD/x265/g').mkv
+    nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
+      -i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
+      -c:a libopus -b:a 128k -vbr on -compression_level 10 -frame_duration 60 -application audio -mapping_family 1 -ac 2 \
+      -c:v hevc_vaapi -profile:v main10 \
+      -max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "/dev/shm/$_filename" || exit 1
+    mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
+    if [[ -f "${d}/${_filename}" ]]; then
+      cmp "${d}/${_filename}" "${video}" || rm -vf "${video}"
+    fi
+  fi
 done
