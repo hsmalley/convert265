@@ -3,11 +3,6 @@ set -o pipefail
 IFS=$'\n\t'
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/x86_64-linux-gnu/
 
-# You'll want to run this kinda like this...
-# find /mnt/ -maxdepth 25 -regex ".*\.\(mkv\|mp4\|wmv\|flv\|webm\|mov\|avi\|m4v\)" | parallel ./parallel_convert_265 {}
-# OR
-# parallel 'find {} -type f -name "*.mkv"' ::: /Muninn/TV /Muninn/Movies | parallel --progress ~/convert265/265 {}
-
 for video; do
   d=$(dirname "$video")
   filename=$(basename "$video")
