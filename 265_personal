@@ -2,10 +2,6 @@
 set -o pipefail
 IFS=$'\n\t'
 
-pro_dir="/opt/amdgpu-pro/etc/vulkan/icd.d"
-export LD_LIBRARY_PATH="/opt/amdgpu/libdrm/lib64:/opt/amdgpu/libdrm/lib32:$LD_LIBRARY_PATH"
-export VK_ICD_FILENAMES="${pro_dir}/amd_icd32.json:${pro_dir}/amd_icd64.json"
-
 for video; do
   if [[ ! -f "${video}.json" ]]; then
     ffprobe -v quiet -print_format json -show_streams "${video}" > "${video}.json"
@@ -31,6 +27,3 @@ for video; do
     fi
   fi
 done
-#-vf 'format=p010,hwupload,scale=1920x1080:flags=lanczos' -c:v hevc_vaapi -profile:v main10 \
-#-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920' \
-#-c:v hevc_vaapi -profile:v main10 -b:v 15M \

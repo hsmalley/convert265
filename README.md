@@ -1,6 +1,6 @@
-# convert265
+# [convert265](https://github.com/hsmalley/convert265)
 
-Script to convert media to x265
+Scripts to convert media to x265
 
 These are mostly a hack job since I'm trying to save space for my media by converting things into HEVC.
 
@@ -12,17 +12,20 @@ the NVIDIA in a few years, so it's kinda stale.
 
 265_system is the one that you should use if you're going to use it.
 
-265_qsv uses Intel Quick Sync to use your igpu. 
+265_qsv uses Intel Quick Sync to use your igpu.
 
-You'll have to compile ffmpeg with the --enable-libmfx option to enable qsv support. I think jellyfin/emby include qsv with their builds too.
+You'll have to compile ffmpeg with the --enable-libmfx option to enable qsv support. I think jellyfin/emby include qsv
+with their builds too.
 
-Adjust the -global_quality flag to change the quality. The lower the number the higher the bitrate. 20 seems to be a good balance of quality vs file size. 
+Adjust the -global_quality flag to change the quality. The lower the number the higher the bitrate. 20 seems to be a
+good balance of quality vs file size.
 
 Here's the options I used to compile it and make qsv work for me:
 
 ```text
 --enable-gpl --enable-version3 --enable-gnutls --enable-libaom --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-libmfx
 ```
+
 I use it with parallel to do multiple files at once like this:
 
 ```shell
