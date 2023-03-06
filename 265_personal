@@ -3,27 +3,27 @@ set -o pipefail
 IFS=$'\n\t'
 
 for video; do
-  if [[ ! -f "${video}.json" ]]; then
-    ffprobe -v quiet -print_format json -show_streams "${video}" > "${video}.json"
-  fi
-  d=$(dirname "$video")
-  filename=$(basename "$video")
-  filename="${filename%.*}"
-  video_codec=$(jq -r '.streams[0].codec_name' < "${video}.json")
-  video_height=$(jq -r '.streams[0].height' < "${video}.json")
-  echo -e "${video} // ${video_codec} // ${video_height}"
-  if [[ ! ${video_codec} =~ "hevc" || ${video_height} -gt 1080 ]]; then
-    _filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/AVC/x265/g' -e 's/XviD/x265/g')_H265.mkv
-    nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -hwaccel_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
-      -i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
-      -vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' \
-      -c:v hevc_vaapi -profile:v main10 \
-      -c:a copy \
-      -max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags \
-      "/dev/shm/$_filename" || exit 1
-    mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
-    if [[ -f "${d}/${_filename}" ]]; then
-      cmp "${d}/${_filename}" "${video}" || rm -vf "${video}"
-    fi
-  fi
+	if [[ ! -f "${video}.json" ]]; then
+		ffprobe -v quiet -print_format json -show_streams "${video}" >"${video}.json"
+	fi
+	d=$(dirname "$video")
+	filename=$(basename "$video")
+	filename="${filename%.*}"
+	video_codec=$(jq -r '.streams[0].codec_name' <"${video}.json")
+	video_height=$(jq -r '.streams[0].height' <"${video}.json")
+	echo -e "${video} // ${video_codec} // ${video_height}"
+	if [[ ! ${video_codec} =~ "hevc" || ${video_height} -gt 1080 ]]; then
+		_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/AVC/x265/g' -e 's/XviD/x265/g')_H265.mkv
+		nice -n 19 ffmpeg -hide_banner -loglevel info -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -hwaccel_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
+			-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
+			-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' \
+			-c:v hevc_vaapi -profile:v main10 \
+			-c:a copy \
+			-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags \
+			"/dev/shm/$_filename" || exit 1
+		mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}"
+		if [[ -f "${d}/${_filename}" ]]; then
+			cmp "${d}/${_filename}" "${video}" || rm -vf "${video}"
+		fi
+	fi
 done
