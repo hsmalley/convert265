@@ -1,0 +1,12 @@
+#!/bin/bash
+set -o pipefail
+IFS=$'\n\t'
+
+for video; do
+	ffprobe -v quiet -print_format json -show_streams "${video}" >"${video}.json"
+	sub_indexes=$(jq -r '.streams[] | select(.codec_type=="subtitle") | .index' <"${video}.json")
+	for subtitle in ${sub_indexes}; do
+		nice -n 18 ~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -analyzeduration 20000000 -probesize 20000000 \
+			-i "${video}" -map "0:${subtitle}" use_metadata_tags "${video}.${subtitle}.srt" || exit 1
+	done
+done
