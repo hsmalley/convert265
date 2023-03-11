@@ -46,10 +46,10 @@ function getinfo() {
 
 function extract_subtitles() {
 	for subtitle in ${sub_indexes}; do
-		nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${video}_${subtitle}.srt" ||
-			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${video}_${subtitle}.vtt" ||
-			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${video}_${subtitle}.ass" ||
-			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" -c copy "${video}_${subtitle}.sup"
+		nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${_filename}_${subtitle}.srt" ||
+			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${_filename}_${subtitle}.vtt" ||
+			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${_filename}_${subtitle}.ass" ||
+			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" -c copy "${_filename}_${subtitle}.sup"
 	done
 }
 
