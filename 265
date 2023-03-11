@@ -4,7 +4,9 @@
 # This will try to use your gpu AMD/INTEL to transcode video into X265
 # The will also remux existing video to a streaming optimized mp4 container
 # If it can remux your video it will extract subtitles and delete the mkv container
-#
+# .FYI
+# QSV Support requires compiling your own ffmpeg
+# --enable-gpl --enable-version3 --enable-gnutls --enable-libaom --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-libmfx
 # .LICENSE [MIT]
 # Copyright © 2023 Hugh Smalley
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -36,7 +38,6 @@ function getinfo() {
 	video_height=$(jq -r '.streams[0].height' <"${video}.json")
 	sub_indexes=$(get_subtitles)
 	video_size=$(stat -c%s "${video}")
-	video_size_90=$((video_size * 90 / 100))
 	video_size_75=$((video_size * 75 / 100))
 	video_size_50=$((video_size * 50 / 100))
 	_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/AVC/x265/g' -e 's/XviD/x265/g')
@@ -45,7 +46,10 @@ function getinfo() {
 
 function extract_subtitles() {
 	for subtitle in ${sub_indexes}; do
-		nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${video}_${subtitle}.srt"
+		nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${video}_${subtitle}.srt" ||
+			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${video}_${subtitle}.vtt" ||
+			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${video}_${subtitle}.ass" ||
+			nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" -c copy "${video}_${subtitle}.sup"
 	done
 }
 
@@ -126,7 +130,7 @@ function remux_video() {
 	ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
 	# To account for loss of bitmap subtitles
-	if ((file_size >= video_size_90)); then
+	if ((file_size >= video_size_75)); then
 		cleanup
 	fi
 }
