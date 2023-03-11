@@ -23,6 +23,8 @@ function getinfo() {
 	video_height=$(jq -r '.streams[0].height' <"${video}.json")
 	sub_indexes=$(get_subtitles)
 	video_size=$(stat -c%s "${video}")
+	video_size_90=$((video_size * 90 / 100))
+	video_size_75=$((video_size * 75 / 100))
 	video_size_50=$((video_size * 50 / 100))
 	_filename=$(echo "${filename}" | sed -e 's/h264/x265/g' -e 's/x264/x265/g' -e 's/AVC/x265/g' -e 's/XviD/x265/g')
 	echo -e "${video} // ${video_codec} // ${video_height} // ${video_size}"
@@ -41,6 +43,7 @@ function convert_video_memory() {
 		-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "/dev/shm/${_filename}.mkv" || exit 1
 	mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}.mkv"
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
+	# To account for the space space savings of being converted
 	if ((file_size >= video_size_50)); then
 		cleanup
 	fi
@@ -53,6 +56,7 @@ function convert_video_audio_problems() {
 		-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' -c:v hevc_vaapi -profile:v main10 \
 		-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mkv" || exit 1
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
+	# To account for the space space savings of being converted
 	if ((file_size >= video_size_50)); then
 		cleanup
 	fi
@@ -64,6 +68,7 @@ function convert_video() {
 		-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' -c:v hevc_vaapi -profile:v main10 \
 		-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mkv" || exit 1
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
+	# To account for the space space savings of being converted
 	if ((file_size >= video_size_50)); then
 		cleanup
 	fi
@@ -76,6 +81,7 @@ function convert_video_qsv_memory() {
 		-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "/dev/shm/${_filename}.mkv" || exit 1
 	mv -vu "/dev/shm/${_filename}" "${d}/${_filename}" || rm -f "/dev/shm/${_filename}.mkv"
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
+	# To account for the space space savings of being converted
 	if ((file_size >= video_size_50)); then
 		cleanup
 	fi
@@ -87,17 +93,27 @@ function convert_video_qsv() {
 		-c:v hevc_qsv -low_power false -preset 4 -profile:v 1 -scenario 3 -look_ahead 1 -global_quality 20 \
 		-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "${d}/$_filename.mkv" || exit 1
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
+	# To account for the space space savings of being converted
 	if ((file_size >= video_size_50)); then
 		cleanup
 	fi
 }
 
-function remux_video() {
-	extract_subtitles
+function remux_video_drop_unsupported() {
 	ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
-	find "${d}" -size 0 -delete
+	extract_subtitles
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
-	if ((file_size >= video_size)); then
+	# To account for the loss of audio that is unsupported
+	if ((file_size >= video_size_75)); then
+		cleanup
+	fi
+}
+
+function remux_video() {
+	ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
+	file_size=$(stat -c%s "${d}/${_filename}.mp4")
+	# To account for loss of bitmap subtitles
+	if ((file_size >= video_size_90)); then
 		cleanup
 	fi
 }
@@ -109,7 +125,9 @@ function cleanup() {
 
 for video; do
 	getinfo
-  [[ ${video_codec} =~ "av1" ]] && exit
-  [[ ${video_codec} =~ "hevc" ]] && remux_video
-  [[ ${video_codec} =~ "hevc" ]] || convert_video_qsv
+	[[ ${video_codec} =~ "av1" ]] && exit
+	[[ ${video_codec} =~ "hevc" ]] && extract_subtitles
+	[[ ${video_codec} =~ "hevc" ]] && remux_video
+	[[ ${video_codec} =~ "hevc" ]] || convert_video
+	find "${d}" -size 0 -delete
 done
