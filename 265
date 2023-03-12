@@ -5,8 +5,8 @@
 # The will also remux existing video to a streaming optimized mp4 container
 # If it can remux your video it will extract subtitles and delete the mkv container
 # .FYI
-# QSV Support requires compiling your own ffmpeg
-# --enable-gpl --enable-version3 --enable-gnutls --enable-libaom --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-libmfx
+# QSV and libfdk_aac support requires compiling your own ffmpeg
+# --enable-gpl --enable-version3 --enable-gnutls --enable-libaom --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-libfdk-aac --enable-libmfx
 # .LICENSE [MIT]
 # Copyright © 2023 Hugh Smalley
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -21,12 +21,14 @@ pro_dir="/opt/amdgpu-pro/etc/vulkan/icd.d"
 export LD_LIBRARY_PATH="/opt/amdgpu/libdrm/lib64:/opt/amdgpu/libdrm/lib32:$LD_LIBRARY_PATH"
 export VK_ICD_FILENAMES="${pro_dir}/amd_icd32.json:${pro_dir}/amd_icd64.json:$VK_ICD_FILENAMES"
 
+# Selects english subs failing that it will get all subs
 function get_subtitles() {
 	# Try to get english subs if not then get all of them
 	jq -r '.streams[] | select(.codec_type=="subtitle") | select(.tags.language | contains("en")) | .index' <"${video}.json" ||
 		jq -r '.streams[] | select(.codec_type=="subtitle") | .index' <"${video}.json"
 }
 
+# Get all the info needed on the video file
 function getinfo() {
 	if [[ ! -f "${video}.json" ]]; then
 		ffprobe -v quiet -print_format json -show_streams "${video}" >"${video}.json"
@@ -44,6 +46,7 @@ function getinfo() {
 	echo -e "${video} // ${video_codec} // ${video_height} // ${video_size}"
 }
 
+# Extract subtitles. Tries other formats if possible. Uses .sup as last option
 function extract_subtitles() {
 	for subtitle in ${sub_indexes}; do
 		nice -n 18 ffmpeg -hide_banner -loglevel error -n -threads 4 -i "${video}" -map "0:${subtitle}" "${d}/${_filename}_${subtitle}.srt" ||
@@ -53,7 +56,8 @@ function extract_subtitles() {
 	done
 }
 
-function convert_video_memory() {
+# Use VAAPI to transcode video into memory then move it back to disk
+function convert_video_vappi_memory() {
 	nice -n 19 ffmpeg -hide_banner -loglevel quiet -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
 		-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy -c:a copy \
 		-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' -c:v hevc_vaapi -profile:v main10 \
@@ -66,20 +70,8 @@ function convert_video_memory() {
 	fi
 }
 
-function convert_video_audio_problems() {
-	nice -n 19 ffmpeg -hide_banner -loglevel quiet -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
-		-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy \
-		-c:a libopus -b:a 128k -vbr on -compression_level 10 -frame_duration 60 -application audio -mapping_family 1 -ac 2 \
-		-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' -c:v hevc_vaapi -profile:v main10 \
-		-max_muxing_queue_size 1024 -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mkv" || exit 1
-	file_size=$(stat -c%s "${d}/${_filename}.mp4")
-	# To account for the space space savings of being converted
-	if ((file_size >= video_size_50)); then
-		cleanup
-	fi
-}
-
-function convert_video() {
+# Use VAAPI to transcode video
+function convert_video_vaapi() {
 	nice -n 19 ffmpeg -hide_banner -loglevel quiet -y -threads 4 -hwaccel vaapi -hwaccel_output_format vaapi -vaapi_device /dev/dri/renderD128 -analyzeduration 20000000 -probesize 20000000 \
 		-i "${video}" -map 0:v -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy -c:a copy \
 		-vf 'scale_vaapi=format=p010,scale_vaapi=w=1920:-2' -c:v hevc_vaapi -profile:v main10 \
@@ -91,6 +83,7 @@ function convert_video() {
 	fi
 }
 
+# Use Quick Sync to transcode video into memory then move it back to disk
 function convert_video_qsv_memory() {
 	nice -n 19 ~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -hwaccel qsv -hwaccel_output_format qsv -analyzeduration 20000000 -probesize 20000000 \
 		-i "${video}" -map 0:v:0 -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy -c:a copy \
@@ -104,6 +97,7 @@ function convert_video_qsv_memory() {
 	fi
 }
 
+# Use Quick Sync to transcode video
 function convert_video_qsv() {
 	nice -n 19 ~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -hwaccel qsv -hwaccel_output_format qsv -analyzeduration 20000000 -probesize 20000000 \
 		-i "${video}" -map 0:v:0 -map 0:a -map 0:s? -map 0:d? -map 0:t? -c:s copy -c:a copy \
@@ -116,6 +110,7 @@ function convert_video_qsv() {
 	fi
 }
 
+# Remux video to mp4 while dropping upsupported codecs like FLAC, OPUS, etc. You can end up with files that have no audio with this option
 function remux_video_drop_unsupported() {
 	ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
 	extract_subtitles
@@ -126,25 +121,27 @@ function remux_video_drop_unsupported() {
 	fi
 }
 
+# Remux the video file to mp4 cotainers. Most failures are caused by audio that can not be stored in a mp4 container. So this will transcode audio to AAC when needed.
 function remux_video() {
-	ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
+	~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" ||
+		ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c:v copy \
+			-c:a libfdk_aac -b:a 384k -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
-	# To account for loss of bitmap subtitles
 	if ((file_size >= video_size_75)); then
 		cleanup
 	fi
 }
 
+# Cleans up the leftovers
 function cleanup() {
-	find "${d}" -size 0 -delete
 	rm -vf "${video}" "${video}.json"
+	find "${d}" -size -1k -delete
 }
 
 for video; do
 	getinfo
 	[[ ${video_codec} =~ "av1" ]] && exit
+	[[ ${video_codec} =~ "hevc" ]] || convert_video_qsv
 	[[ ${video_codec} =~ "hevc" ]] && extract_subtitles
 	[[ ${video_codec} =~ "hevc" ]] && remux_video
-	[[ ${video_codec} =~ "hevc" ]] || convert_video
-	find "${d}" -size 0 -delete
 done
