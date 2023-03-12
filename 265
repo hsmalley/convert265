@@ -112,7 +112,7 @@ function convert_video_qsv() {
 
 # Remux video to mp4 while dropping upsupported codecs like FLAC, OPUS, etc. You can end up with files that have no audio with this option
 function remux_video_drop_unsupported() {
-	~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
+	nice -n 19 ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
 	extract_subtitles
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
 	# To account for the loss of audio that is unsupported
@@ -123,8 +123,8 @@ function remux_video_drop_unsupported() {
 
 # Remux the video file to mp4 cotainers. Most failures are caused by audio that can not be stored in a mp4 container. So this will transcode audio to AAC when needed.
 function remux_video() {
-	~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" ||
-		~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c:v copy \
+	nice -n 19 ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c: copy -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" ||
+		nice -n 19 ~/Downloads/ffmpeg/ffmpeg -hide_banner -loglevel quiet -y -threads 4 -i "${video}" -map 0:v -map 0:a -c:v copy \
 			-c:a libfdk_aac -b:a 384k -movflags +faststart -movflags use_metadata_tags "${d}/${_filename}.mp4" || exit 1
 	file_size=$(stat -c%s "${d}/${_filename}.mp4")
 	if ((file_size >= video_size_75)); then
